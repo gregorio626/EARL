@@ -1,0 +1,248 @@
+/*
+*
+2*	Created: March 18, 2016
+*
+*	Author: Gregory Roberts
+*
+*/
+
+
+#ifndef _DYNAMIXEL_H_
+#define _DYNAMIXEL_H_
+
+#include <iostream>
+#include <string>
+#include <sstream>
+
+
+namespace EARL
+{
+
+		class DXL_Data
+		{
+		public:
+			DXL_Data();
+			~DXL_Data();
+
+            enum
+            {
+                /*Right*/
+                /*Front*/
+                ID_RFCoxa               = 1,
+                ID_RFFemur              = 1,
+                ID_RFTibia              = 1,
+                /*Middle*/
+                ID_RMCoxa               = 1,
+                ID_RMFemur              = 1,
+                ID_RMTibia              = 1,
+                /*Rear*/
+                ID_RRCoxa               = 1,
+                ID_RRFemur              = 1,
+                ID_RRTibia              = 1,
+
+                /*Left*/
+                /*Front*/
+                ID_LFCoxa               = 1,
+                ID_LFFemur              = 1,
+                ID_LFTibia              = 1,
+                /*Middle*/
+                ID_LMCoxa               = 1,
+                ID_LMFemur              = 1,
+                ID_LMTibia              = 1,
+                /*Rear*/
+                ID_LRCoxa               = 1,
+                ID_LRFemur              = 1,
+                ID_LRTibia              = 1,
+
+                MIN_ID                  = 1,
+                MAX_ID                  = 18
+
+            };
+            enum
+            {
+                NUMBER_OF_MOTORS        = 18,
+            };
+
+            enum/*Compliance slope*/
+            {
+                SLOPE_STIFF             = 16,
+                SLOPE_DEFAULT           = 32
+
+            };
+
+            /*Set position*/
+            void setValue(int id, int value);//center = 512
+            void setAngle(int id, double angle);//center = 0 degrees
+            void setRadian(int id, double radian);//center = 0 radians
+
+            /*Get position*/
+            int getValue(int id);//returns motor's step value(position)
+            double getAngle(int id);//returns motor's current position in degrees
+            double getRadian(int id);//returns motor's current position in radians
+            
+            /*Set compliance slopes*/
+            void setCWSlope(int id, int CWSlope);//sets the clockwise compliance slope
+            void setCCWSlope(int id, int CCWSlope);//sets the counter-clockwise compliance slope
+            void setBothSlopes(int id, int CWSlope, int CCWSlope);//sets both of the compliance slopes
+
+            /*Get compliance slopes*/
+            int getCWSlope(int id);//returns the clockwise compliance slope
+            int getCCWSlope(int id);//returns the counter-clockwise compliance slope
+            std::string getBothSlopes(int id);//returns both, the clockwise and counter-clockwise compliance slopes respectively
+
+            /*Change ID*/
+            //void setID(int ID, int newID);//used to change the ID of a motor
+
+            /*Torque enable*/
+            void enableTorque(int id, bool enable);//0 == 'off' & 1 = 'on'
+
+            /*Read Torque setting*/
+            bool readTorqueBool(int id);//0 == 'off' & 1 = 'on'
+
+
+
+            /*LED*/
+            void LED(int id, bool enable);//0 == 'off' & 1 = 'on'
+
+            /*Moving speed*/
+            void setSpeed(int id, int speed);//0-1023(unit is ~0.111 rpm);sets the speed of just 1 motor
+            void setSpeedAll(int speed);//sets the speed of all of the motors
+
+        private:
+
+		protected:
+            /*Position*/
+            int m_Value[NUMBER_OF_MOTORS];
+            double m_Angle[NUMBER_OF_MOTORS];//0 degrees = centered
+            double m_Radian[NUMBER_OF_MOTORS];//0 = centered
+            
+            /*Complinace slopes*/
+            int m_CWSlope[NUMBER_OF_MOTORS];//clockwise
+            int m_CCWSlope[NUMBER_OF_MOTORS];//counter-clockwise
+
+            /*Angle limits*/
+            int m_Angleub[NUMBER_OF_MOTORS];//upper bound
+            int m_Anglelb[NUMBER_OF_MOTORS];//lower bound
+
+            int m_Speed[NUMBER_OF_MOTORS];//moving speed
+
+            /*Torque*/
+            bool m_EnableTorque[NUMBER_OF_MOTORS];//torque on/off
+
+            /*LED*/
+            bool m_LED[NUMBER_OF_MOTORS];//LED on the motor
+
+
+		};
+////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////
+        class AXServo
+        {
+
+        public:
+            AXServo();//constructor
+            ~AXServo();//destructor
+            enum//used enumeration from Interbotix Labs' "HR0S1-Framework/Framework/include/AXDXL.h"
+            {
+                P_MODEL_NUMBER_L            = 0,
+                P_MODEL_NUMBER_H            = 1,
+                P_VERSION                   = 2,
+                P_ID                        = 3,
+                P_BAUD_RATE                 = 4,
+                P_RETURN_DELAY_TIME         = 5,
+                P_CW_ANGLE_LIMIT_L          = 6,
+                P_CW_ANGLE_LIMIT_H          = 7,
+                P_CCW_ANGLE_LIMIT_L         = 8,
+                P_CCW_ANGLE_LIMIT_H         = 9,
+                P_HIGH_LIMIT_TEMPERATURE    = 11,
+                P_LOW_LIMIT_VOLTAGE         = 12,
+                P_HIGH_LIMIT_VOLTAGE        = 13,
+                P_MAX_TORQUE_L              = 14,
+                P_MAX_TORQUE_H              = 15,
+                P_RETURN_LEVEL              = 16,
+                P_ALARM_LED                 = 17,
+                P_ALARM_SHUTDOWN            = 18,
+                P_TORQUE_ENABLE             = 24,
+                P_LED                       = 25,
+                P_CW_COMPLIANCE_MARGIN      = 26,
+                P_CCW_COMPLIANCE_MARGIN     = 27,
+                P_CW_COMPLIANCE_SLOPE       = 28,
+                P_CCW_COMPLIANCE_SLOPE      = 29,
+                P_GOAL_POSITION_L           = 30,
+                P_GOAL_POSITION_H           = 31,
+                P_MOVING_SPEED_L            = 32,
+                P_MOVING_SPEED_H            = 33,
+                P_TORQUE_LIMIT_L            = 34,
+                P_TORQUE_LIMIT_H            = 35,
+                P_PRESENT_POSITION_L        = 36,
+                P_PRESENT_POSITION_H        = 37,
+                P_PRESENT_SPEED_L           = 38,
+                P_PRESENT_SPEED_H           = 39,
+                P_PRESENT_LOAD_L            = 40,
+                P_PRESENT_LOAD_H            = 41,
+                P_PRESENT_VOLTAGE           = 42,
+                P_PRESENT_TEMPERATURE       = 43,
+                P_REGISTERED_INSTRUCTION    = 44,
+                P_MOVING                    = 46,
+                P_LOCK                      = 47,
+                P_PUNCH_L                   = 48,
+                P_PUNCH_H                   = 49,
+                MAXNUM_ADDRESS
+            };
+
+            
+
+
+
+            /*Position*/
+            static const int AX_MIN_VALUE    =    0;
+            static const int AX_CENTER_VALUE =  512;
+            static const int AX_MAX_VALUE    = 1023;
+
+            /*Angles*/
+            static const double AX_MIN_ANGLE    = -150;
+            static const double AX_MAX_ANGLE    =  150;
+
+            static const double RATIO_V2A = 0.293; // 300 / 1024
+            static const double RATIO_A2V = 3.413; // 1024 / 300
+            static const int PARAM_BYTES = 7;
+
+            static int getMirrorValue(int value)
+            {
+                return AX_MAX_VALUE + 1 - value;
+            }    
+
+            static double getMirrorAngle(double angle)
+            {
+                return (-1 * angle);
+            }
+            static int A2V(double angle)
+            {
+                return (int)(angle * RATIO_A2V) + AX_CENTER_VALUE;
+            }
+            static double V2A(int value)
+            {
+                return (double)(value - AX_CENTER_VALUE) * RATIO_V2A;
+            }
+
+
+        };
+        class Communication
+        {
+        public:
+            Communication(int baudretae);//sets the desired baudrate
+            ~Communication();
+
+
+
+
+        private:
+
+        protected:
+
+
+        };
+}
+
+#endif
