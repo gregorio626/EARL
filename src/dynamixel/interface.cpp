@@ -6,7 +6,7 @@
 *
 */
 
-#include "/home/gregorio626/EARL/include/dynamixel/dynamixel.h"
+#include "dynamixel.h"
 #include <unistd.h>
 #include <sstream>
 

@@ -6,13 +6,13 @@
 *
 */
 
-#include "/home/gregorio626/EARL/include/dynamixel/dynamixel.h"
+#include "dynamixel.h"
 #include <unistd.h>
+#include <iostream>
 
 #ifdef _cplusplus
 extern "C" {
 #endif
-
 
 using namespace EARL;
 using namespace Dynamixel;
@@ -30,20 +30,13 @@ Handler::~Handler()
 Interface::StatusError Handler::initInterface(int interfaceType, int baudrate, const char * devPort)
 {
 	baud = baudrate;
-	interface = Interface::create(interfaceType, baud);
+	//interface = Interface::create(interfaceType, baud);
 	Interface::StatusError ret;
 	if((ret = interface->openPort(devPort)) == Interface::ERR_NONE)
 	{
-		if(!start())
-			{
-				ret = Interface::ERR_PORT_DISCONNECTED;
-			}
-			else
-			{
-				std::cerr << "Error: Handler::initInterface() interfcae->openPort() failed" << std::endl;
-			}
 			return ret;
 	}
+	return ret;
 }
 
 

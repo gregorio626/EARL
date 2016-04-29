@@ -19,8 +19,7 @@ namespace EARL
     namespace Dynamixel
     {
 
-        class Interface//UART Interface
-        {
+        class Interface{//UART Interface
         public:
             enum
             {
@@ -42,44 +41,89 @@ namespace EARL
             }StatusError;
 
         public:
+
             Interface(int baudrate) : isCurrentlyOpen(false), byteTransferTime(0){ baud = baudrate;}
+            
             bool isOpen() { return isCurrentlyOpen; }
+            
             static Interface* create(int type, int baud);
 
             /*VIRTUAL*/
             virtual ~Interface() = 0;
+
             virtual StatusError openPort(const char * devPort) = 0;
-            virtual int closePort(int _fd) = 0;
+
+            virtual int closePort() = 0;
+
+            float BAUD();
+
         protected:
+
             int baud;
+
             bool isCurrentlyOpen;
+
             float byteTransferTime;
+
         private:
 
         };
-        class USB2AX : public Interface
-        {
+        class USB2AX : public Interface {
         private:
+
             int _fd;
+
         public:
+
             USB2AX(int baudrate) : Interface(baudrate), _fd(-1){
             }
+
             StatusError openPort(const char * devPort);//'devPort' = 'devicePort'
+            
             int closePort();
         };
-        class Handler 
+        class Pro : public Interface
         {
         private:
-            Interface * interface;
-            bool isBusy;
+
+            int _fd;
+
         public:
-            Handler();
-            ~Handler();
-            Interface::StatusError initInterface(int interfaceType, int baudrate, const char * devPort);
-            bool busy();
-            void setInterface(Interface * interface);
+
+            Pro(int baudrate) : Interface(baudrate), _fd(-1){
+            }
+
+            StatusError openPort(const char * devPort);
+
+            int closePort();
+
         protected:
+
+        };
+
+        class Handler {
+        private:
+
+            Interface * interface;
+
+            bool isBusy;
+
+        public:
+
+            Handler();
+
+            ~Handler();
+
+            Interface::StatusError initInterface(int interfaceType, int baudrate, const char * devPort);
+           
+            bool busy();
+           
+            void setInterface(Interface * interface);
+        
+        protected:
+        
             int baud;
+
         };
     }
 }

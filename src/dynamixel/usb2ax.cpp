@@ -17,7 +17,7 @@
 #include <sys/ioctl.h>
 #include <sys/time.h>
 #include <errno.h>
-#include "/home/gregorio626/EARL/include/dynamixel/dynamixel.h"
+#include "dynamixel.h"
 
 #ifdef _cplusplus
 extern "C" {
@@ -82,7 +82,7 @@ using namespace Dynamixel;
 		tcflush(_fd, TCIFLUSH);
 		tcsetattr(_fd, TCSANOW, &newtio);
 
-		isCurrentlyOpen = true;
+
 		return ERR_NONE;
 	}
 
@@ -93,6 +93,7 @@ using namespace Dynamixel;
 			close(_fd);
 			_fd = -1;
 		}
+		return ERR_NONE;
 	}
 
 	
