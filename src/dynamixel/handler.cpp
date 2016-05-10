@@ -2,13 +2,13 @@
 *
 *   Author: EARL Technologies
 *
-*   Created: April 27, 2016
+*   Created: May 03, 2016
 *
 */
 
-#include "dynamixel.h"
-#include <unistd.h>
+#include "/home/gregorio626/EARL/include/dynamixel/dynamixel.h"
 #include <iostream>
+#include <string.h>
 
 #ifdef _cplusplus
 extern "C" {
@@ -17,25 +17,31 @@ extern "C" {
 using namespace EARL;
 using namespace Dynamixel;
 
-Handler::Handler() : interface(NULL), isBusy(false)
-{
+Handler::Handler() : interface(NULL), isBusy(false) {
+	baud = (int)NULL;
+
 
 }
 
-Handler::~Handler()
-{
+Handler::~Handler() {
 
 }
 
-Interface::StatusError Handler::initInterface(int interfaceType, int baudrate, const char * devPort)
-{
+Interface::Status Handler::openInterface(const char * field, int baudrate){
 	baud = baudrate;
-	//interface = Interface::create(interfaceType, baud);
-	Interface::StatusError ret;
-	if((ret = interface->openPort(devPort)) == Interface::ERR_NONE)
-	{
-			return ret;
+	interface = Interface::createInterface(baudrate);
+
+	Interface::Status ret;
+	if((ret = interface->openPort(field)) == Interface::ERR_NONE) {
+		ret = Interface::ERR_NONE;
+		std::cout << "EARL::Dynamixel::Handler::openInterface(\"" << field << "\", " << baudrate << "): NONE" << std::endl;
 	}
+	else{
+		ret = Interface::ERR_UNKNOWN;
+		std::cerr << "EARL::Dynamixel::Handler::openInterface(\"" << field << "\", " << baudrate << "): ERROR" << std::endl;
+
+	}
+
 	return ret;
 }
 

@@ -2,137 +2,138 @@
 *
 *   Author: EARL Technologies
 *
-*   Created: April 16, 2016
+*   Created: May 01, 2016
 *
 */
 
+
 #ifndef _DYNAMIXEL_H_
 #define _DYNAMIXEL_H_
+
 #include <iostream>
+#include <string>
+#include <vector>
+#include <map>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+namespace EARL {
+namespace Dynamixel {
 
-namespace EARL
-{
-    namespace Dynamixel
-    {
+class Interface {
+public:
+	typedef enum {
+	    ERR_NONE                = 0,//There is no error
+	    COMMAND_UNSUPPORTED     = -1,//The command is unsupported
+	    PORT_IS_DISCONNECTED    = -2,//The port is disconnected
+	    PACKET_LENGTH_ERR       = -3,//The packet is too short
+	    PACKET_CHECKSUM_ERR     = -4,//Bad incoming checksum
+	    PACKET_NULL             = -5,//The packet is empty/NULL
+	    ERR_BAD_DEVICE_NAME     = -6,//There is no such device type(see com::open(...))
+	    DEVICE_OPEN_ERROR       = -7,//Device open error(for usb2ax code)
+	    PORT_IS_CLOSED          = -8,//The communcation port is not open
+	    ERR_UNKNOWN             = -9 //Unknown error
+	 }Status;
 
-        class Interface{//UART Interface
-        public:
-            enum
-            {
-               USB2AX,
-               PRO
-            };
-            typedef enum
-            {
-                ERR_NONE                 = 0,//There is no error
-                ERR_COMMAND_UNSUPPORTED = -1,//The command is unsupported
-                ERR_PORT_DISCONNECTED   = -2,//The port is disconnected
-                ERR_PACKET_LENGTH       = -3,//The packet is too short
-                ERR_PACKET_CHECKSUM     = -4,//Bad incoming checksum
-                ERR_PACKET_NULL         = -5,//The packet is empty/NULL
-                ERR_BAD_DEVICE_NAME     = -6,//There is no such device type(see com::open(...))
-                ERR_DEVICE_OPEN         = -7,//Device open error(for usb2ax code)
-                ERR_PORT_IS_CLOSED      = -8,//The communcation port is not open
-                ERR_UNKNOWN             = -9 //Unknown error
-            }StatusError;
+public:
+	
+	static Interface* createInterface(int baud);
 
-        public:
+	Interface(int baudrate) : currentlyOpen(false){
+		baud = baudrate;
+	}
 
-            Interface(int baudrate) : isCurrentlyOpen(false), byteTransferTime(0){ baud = baudrate;}
-            
-            bool isOpen() { return isCurrentlyOpen; }
-            
-            static Interface* create(int type, int baud);
+	virtual Status openPort(const char * field) = 0;
 
-            /*VIRTUAL*/
-            virtual ~Interface() = 0;
+	virtual void closePort() = 0;
 
-            virtual StatusError openPort(const char * devPort) = 0;
+	int baud;
 
-            virtual int closePort() = 0;
+protected:
 
-            float BAUD();
+	bool currentlyOpen;
 
-        protected:
+};
 
-            int baud;
+class USB2AX : public Interface {
+public:
+	USB2AX(int baudrate) : Interface(baudrate), fid(-1) {
+	}
+	Status openPort(const char * field);//must execute 'sudo usermod -a -G dialout $USERNAME' before this will work, if you have not already added yourself to the dialout group.
+	void closePort();
+protected:
+	int	fid;
+};
 
-            bool isCurrentlyOpen;
+class Handler{
+private:
 
-            float byteTransferTime;
+	Interface* interface;
 
-        private:
+	bool isBusy;
 
-        };
-        class USB2AX : public Interface {
-        private:
+public:
 
-            int _fd;
+	Handler();
 
-        public:
+	~Handler();
 
-            USB2AX(int baudrate) : Interface(baudrate), _fd(-1){
-            }
+	Interface::Status openInterface(const char * field, int baudrate);
 
-            StatusError openPort(const char * devPort);//'devPort' = 'devicePort'
-            
-            int closePort();
-        };
-        class Pro : public Interface
-        {
-        private:
 
-            int _fd;
+protected:
 
-        public:
+	int baud;
+};
 
-            Pro(int baudrate) : Interface(baudrate), _fd(-1){
-            }
+class Packet {
 
-            StatusError openPort(const char * devPort);
-
-            int closePort();
-
-        protected:
-
-        };
-
-        class Handler {
-        private:
-
-            Interface * interface;
-
-            bool isBusy;
-
-        public:
-
-            Handler();
-
-            ~Handler();
-
-            Interface::StatusError initInterface(int interfaceType, int baudrate, const char * devPort);
-           
-            bool busy();
-           
-            void setInterface(Interface * interface);
-        
-        protected:
-        
-            int baud;
-
-        };
-    }
-}
-
-#ifdef __cplusplus
-}
-#endif
-
-#endif
+private:
 
 
 
+	void beginPacket(int iID);//the head/header of the packet
+	void endPacket();//the foot of the packet
+
+	void setPacketID(int iID);
+	void setPacketInstruction(unsigned char ucInstruction);
+	void setPacketAddress(int iAddress);
+	void setPacketLowHighByte(int iWord);
+
+	int getPacketLowByte(int iWord);
+	int getPacketHighByte(int iWord);
+
+
+	
+
+public:
+	std::vector<unsigned char> packet;//the data packet to be sent/received
+
+	Packet(){
+	}
+	std::vector<unsigned char>& ping(int iID);
+	std::vector<unsigned char>& readByte(int iID, int iAddress);//length read = 1
+	std::vector<unsigned char>& readWord(int iID, int iAddress);//length read = 2
+	std::vector<unsigned char>& writeByte(int iID, int iAddress, int ivalue);//length written = 1
+	std::vector<unsigned char>& writeWord(int iID, int iAddress, int ivalue);//length written = 2
+	std::vector<unsigned char>& reset(int iID);
+
+	void write(int iID, int iAddress, int ivalue);
+	void viewPacket();
+
+protected:
+	bool m_bBusInUse;
+};
+struct DataRange {
+
+	unsigned short reg;
+	unsigned short length;
+
+	DataRange(unsigned short reg = 0, unsigned short length = 0) : reg(reg), length(length){
+	}
+};
+unsigned char getChecksum(const unsigned char * pkucBuffer);
+
+
+}//namespace Dynamixel
+}//namespace EARL
+
+#endif//#ifndef _DYNAMIXEL_H_

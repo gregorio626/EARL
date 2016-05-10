@@ -2,13 +2,11 @@
 *
 *   Author: EARL Technologies
 *
-*   Created: April 18, 2016
+*   Created: May 01, 2016
 *
 */
 
-#include <stdlib.h>
 #include <stdio.h>
-#include <iostream>
 #include <string.h>
 #include <unistd.h>
 #include <fcntl.h>
@@ -16,6 +14,7 @@
 #include <linux/serial.h>
 #include <sys/ioctl.h>
 #include <sys/time.h>
+#include <iostream>
 #include <errno.h>
 #include "dynamixel.h"
 
@@ -26,81 +25,68 @@ extern "C" {
 using namespace EARL;
 using namespace Dynamixel;
 
+Interface::Status USB2AX::openPort(const char * field)
+{
+	struct termios newtio;
 
-	Interface::StatusError USB2AX::openPort(const char * devPort)
-	{
-		char Port[20];
-		strcpy(Port, devPort);
-		float baudrate = baud;
+	memset(&newtio, 0, sizeof(newtio));
+	closePort();
 
-		struct termios newtio;
-
-		memset(&newtio, 0, sizeof(newtio));
-		closePort();//make sure it is not open
-
-		if((_fd = ::open(devPort, O_RDWR|O_NOCTTY|O_NONBLOCK)) < 0)
-		{
-			std::cerr << "device open error: " << devPort << std::endl;
-			closePort();
-			return ERR_DEVICE_OPEN;
-		}
-
-		newtio.c_cflag 		= B1000000|CS8|CLOCAL|CREAD;
-		newtio.c_iflag 		= IGNPAR;
-		newtio.c_oflag 		= 0;
-		newtio.c_lflag		= 0;
-		newtio.c_cc[VTIME] 	= 0;
-		newtio.c_cc[VMIN] 	= 0;
-
-		tcflush(_fd, TCIFLUSH);
-		tcsetattr(_fd, TCSANOW, &newtio);
-
-		if(_fd == -1)
-			return ERR_UNKNOWN;
-
+	if((fid = ::open(field, O_RDWR|O_NOCTTY|O_NONBLOCK)) < 0) {
+		fprintf(stderr, "device open error: %s\n", field);
 		closePort();
-
-		byteTransferTime = (float)((1000.0f / baudrate) * 12.0f);
-
-		memset(&newtio, 0, sizeof(newtio));
-		closePort();
-
-		if((_fd = open(devPort, O_RDWR|O_NOCTTY|O_NONBLOCK)) < 0)
-		{
-			std::cerr << "device open error: " << devPort << std::endl;
-			closePort();
-			return ERR_DEVICE_OPEN;
-		}
-
-		newtio.c_cflag 		= B1000000|CS8|CLOCAL|CREAD;
-		newtio.c_iflag 		= IGNPAR;
-		newtio.c_oflag 		= 0;
-		newtio.c_lflag		= 0;
-		newtio.c_cc[VTIME] 	= 0;	// time-out 값 (TIME * 0.1초) 0 : disable
-		newtio.c_cc[VMIN] 	= 0;	// MIN 은 read 가 return 되기 위한 최소 문자 개수
-
-		tcflush(_fd, TCIFLUSH);
-		tcsetattr(_fd, TCSANOW, &newtio);
-
-
-		return ERR_NONE;
+		return DEVICE_OPEN_ERROR;
 	}
 
-	int USB2AX::closePort()
-	{
-		if(_fd != -1)
-		{
-			close(_fd);
-			_fd = -1;
-		}
-		return ERR_NONE;
-	}
+	newtio.c_cflag		= B1000000|CS8|CLOCAL|CREAD;
+	newtio.c_iflag		= IGNPAR;
+	newtio.c_oflag		= 0;
+	newtio.c_lflag		= 0;
+	newtio.c_cc[VTIME]	= 0;	// time-out 값 (TIME * 0.1초) 0 : disable
+	newtio.c_cc[VMIN]	= 0;	// MIN 은 read 가 return 되기 위한 최소 문자 개수
 
+	tcflush(fid, TCIFLUSH);
+	tcsetattr(fid, TCSANOW, &newtio);
 	
+	if(fid == -1)
+		return DEVICE_OPEN_ERROR;
+        
+	closePort();
+	
+	memset(&newtio, 0, sizeof(newtio));
+	closePort();
+	
+	if((fid = open(field, O_RDWR|O_NOCTTY|O_NONBLOCK)) < 0) {
+		fprintf(stderr, "device open error: %s\n", field);
+		closePort();
+		return DEVICE_OPEN_ERROR;
+	}
 
+	newtio.c_cflag		= B1000000|CS8|CLOCAL|CREAD;
+	newtio.c_iflag		= IGNPAR;
+	newtio.c_oflag		= 0;
+	newtio.c_lflag		= 0;
+	newtio.c_cc[VTIME]	= 0;	// time-out 값 (TIME * 0.1초) 0 : disable
+	newtio.c_cc[VMIN]	= 0;	// MIN 은 read 가 return 되기 위한 최소 문자 개수
+
+	tcflush(fid, TCIFLUSH);
+	tcsetattr(fid, TCSANOW, &newtio);
+	
+	std::cout << "EARL::Dynamixel::UBS2AX::openPort(\"" << field << "\"):                NONE" << std::endl;
+	return ERR_NONE;
+
+}
+
+void USB2AX::closePort()
+{
+	if(fid != -1)
+		close(fid);
+	fid = -1;
+}
 
 
 
 #ifdef _cplusplus
 }
 #endif
+

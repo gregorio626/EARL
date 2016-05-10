@@ -1,8 +1,8 @@
 /*
 *
-2*	Created: March 18, 2016
+*   Author: EARL Technologies
 *
-*	Author: Gregory Roberts
+*   Created: May 01, 2016
 *
 */
 
@@ -12,237 +12,252 @@
 
 #include <iostream>
 #include <string>
-#include <sstream>
+#include <vector>
+#include <map>
+
+namespace EARL {
+namespace Dynamixel {
 
 
-namespace EARL
-{
+#define REG_AX_Model_Number			(0)
+#define REG_AX_Firmware_Ver			(2)
+#define REG_AX_ID					(3)
+#define REG_AX_Baud					(4)
+#define REG_AX_Ret_Delay_Time		(5)
+#define REG_AX_CW_Ang_Lim			(6)
+#define REG_AX_CCW_Ang_Lim			(8)
+#define REG_EX106_Drive_Mode		(10)
+#define REG_AX_Temp_Lim				(11)
+#define REG_AX_Voltage_Lim_Low		(12)
+#define REG_AX_Voltage_Lim_Hi		(13)
+#define REG_AX_Torque_Max			(14)
+#define REG_AX_Stat_Ret_Level		(16)
+#define REG_AX_Alarm_LED			(17)
+#define REG_AX_Alarm_Shutdown		(18)
 
-		class DXL_Data
-		{
-		public:
-			DXL_Data();
-			~DXL_Data();
+#define REG_AX_Torque_EN			(24)
+#define REG_AX_LED					(25)
+#define REG_AX_CW_Margin			(26)
+#define REG_AX_CCW_Margin			(27)
+#define REG_AX_CW_Slope				(28)
+#define REG_AX_CCW_Slope			(29)
+#define REG_AX_Goal_Pos				(30)
+#define REG_AX_Goal_Vel				(32)
+#define REG_AX_Goal_Torque			(34)
+#define REG_AX_Present_Pos			(36)
+#define REG_AX_Present_Speed		(38)
+#define REG_AX_Present_Load			(40)
+#define REG_AX_Present_Voltage		(42)
+#define REG_AX_Present_Temp			(43)
+#define REG_AX_Registered			(44)
+#define REG_AX_Moving				(46)
+#define REG_AX_Lock					(47)
+#define REG_AX_Punch				(48)
 
-            enum
-            {
-                /*Right*/
-                /*Front*/
-                ID_RFCoxa               = 1,
-                ID_RFFemur              = 1,
-                ID_RFTibia              = 1,
-                /*Middle*/
-                ID_RMCoxa               = 1,
-                ID_RMFemur              = 1,
-                ID_RMTibia              = 1,
-                /*Rear*/
-                ID_RRCoxa               = 1,
-                ID_RRFemur              = 1,
-                ID_RRTibia              = 1,
+class Motor;
 
-                /*Left*/
-                /*Front*/
-                ID_LFCoxa               = 1,
-                ID_LFFemur              = 1,
-                ID_LFTibia              = 1,
-                /*Middle*/
-                ID_LMCoxa               = 1,
-                ID_LMFemur              = 1,
-                ID_LMTibia              = 1,
-                /*Rear*/
-                ID_LRCoxa               = 1,
-                ID_LRFemur              = 1,
-                ID_LRTibia              = 1,
+class Register {
+public:
+	int value;
 
-                MIN_ID                  = 1,
-                MAX_ID                  = 18
+	Register() : value(-1) {
+	}
 
-            };
-            enum
-            {
-                NUMBER_OF_MOTORS        = 18,
-            };
+	Register & operator =(const int & value) {
+		this->value = value;
+		return *this;
+	}
 
-            enum/*Compliance slope*/
-            {
-                SLOPE_STIFF             = 16,
-                SLOPE_DEFAULT           = 32
+	operator int() {
+		return value;
+	}
+};
 
-            };
-
-            /*Set position*/
-            void setValue(int id, int value);//center = 512
-            void setAngle(int id, double angle);//center = 0 degrees
-            void setRadian(int id, double radian);//center = 0 radians
-
-            /*Get position*/
-            int getValue(int id);//returns motor's step value(position)
-            double getAngle(int id);//returns motor's current position in degrees
-            double getRadian(int id);//returns motor's current position in radians
-            
-            /*Set compliance slopes*/
-            void setCWSlope(int id, int CWSlope);//sets the clockwise compliance slope
-            void setCCWSlope(int id, int CCWSlope);//sets the counter-clockwise compliance slope
-            void setBothSlopes(int id, int CWSlope, int CCWSlope);//sets both of the compliance slopes
-
-            /*Get compliance slopes*/
-            int getCWSlope(int id);//returns the clockwise compliance slope
-            int getCCWSlope(int id);//returns the counter-clockwise compliance slope
-            std::string getBothSlopes(int id);//returns both, the clockwise and counter-clockwise compliance slopes respectively
-
-            /*Change ID*/
-            //void setID(int ID, int newID);//used to change the ID of a motor
-
-            /*Torque enable*/
-            void enableTorque(int id, bool enable);//0 == 'off' & 1 = 'on'
-
-            /*Read Torque setting*/
-            bool readTorqueBool(int id);//0 == 'off' & 1 = 'on'
+class MotorCalibration {
+public:
 
 
+	void setup();
 
-            /*LED*/
-            void LED(int id, bool enable);//0 == 'off' & 1 = 'on'
+	void convert(double position, unsigned char* buffer);
 
-            /*Moving speed*/
-            void setSpeed(int id, int speed);//0-1023(unit is ~0.111 rpm);sets the speed of just 1 motor
-            void setSpeedAll(int speed);//sets the speed of all of the motors
+	double invert(unsigned char* buffer);
 
-        private:
+	void setOffset(double offset) {
+		this->offset = offset;
+	}
 
-		protected:
-            /*Position*/
-            int m_Value[NUMBER_OF_MOTORS];
-            double m_Angle[NUMBER_OF_MOTORS];//0 degrees = centered
-            double m_Radian[NUMBER_OF_MOTORS];//0 = centered
-            
-            /*Complinace slopes*/
-            int m_CWSlope[NUMBER_OF_MOTORS];//clockwise
-            int m_CCWSlope[NUMBER_OF_MOTORS];//counter-clockwise
+	void setReverse(bool reversed) {
+		this->reverse = reversed;
+	}
 
-            /*Angle limits*/
-            int m_Angleub[NUMBER_OF_MOTORS];//upper bound
-            int m_Anglelb[NUMBER_OF_MOTORS];//lower bound
+	MotorCalibration() :  offset(0), reverse(false) {
+	}
 
-            int m_Speed[NUMBER_OF_MOTORS];//moving speed
+private:
+	double offset;
+	bool reverse;
 
-            /*Torque*/
-            bool m_EnableTorque[NUMBER_OF_MOTORS];//torque on/off
-
-            /*LED*/
-            bool m_LED[NUMBER_OF_MOTORS];//LED on the motor
+};
 
 
-		};
-////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////
-        class AXServo
-        {
+class Interface {
+public:
+	typedef enum {
+	    ERR_NONE                = 0,//There is no error
+	    COMMAND_UNSUPPORTED     = -1,//The command is unsupported
+	    PORT_IS_DISCONNECTED    = -2,//The port is disconnected
+	    PACKET_LENGTH_ERR       = -3,//The packet is too short
+	    PACKET_CHECKSUM_ERR     = -4,//Bad incoming checksum
+	    PACKET_NULL             = -5,//The packet is empty/NULL
+	    ERR_BAD_DEVICE_NAME     = -6,//There is no such device type(see com::open(...))
+	    DEVICE_OPEN_ERROR       = -7,//Device open error(for usb2ax code)
+	    PORT_IS_CLOSED          = -8,//The communcation port is not open
+	    ERR_UNKNOWN             = -9 //Unknown error
+	 }Status;
 
-        public:
-            AXServo();//constructor
-            ~AXServo();//destructor
-            enum//used enumeration from Interbotix Labs' "HR0S1-Framework/Framework/include/AXDXL.h"
-            {
-                P_MODEL_NUMBER_L            = 0,
-                P_MODEL_NUMBER_H            = 1,
-                P_VERSION                   = 2,
-                P_ID                        = 3,
-                P_BAUD_RATE                 = 4,
-                P_RETURN_DELAY_TIME         = 5,
-                P_CW_ANGLE_LIMIT_L          = 6,
-                P_CW_ANGLE_LIMIT_H          = 7,
-                P_CCW_ANGLE_LIMIT_L         = 8,
-                P_CCW_ANGLE_LIMIT_H         = 9,
-                P_HIGH_LIMIT_TEMPERATURE    = 11,
-                P_LOW_LIMIT_VOLTAGE         = 12,
-                P_HIGH_LIMIT_VOLTAGE        = 13,
-                P_MAX_TORQUE_L              = 14,
-                P_MAX_TORQUE_H              = 15,
-                P_RETURN_LEVEL              = 16,
-                P_ALARM_LED                 = 17,
-                P_ALARM_SHUTDOWN            = 18,
-                P_TORQUE_ENABLE             = 24,
-                P_LED                       = 25,
-                P_CW_COMPLIANCE_MARGIN      = 26,
-                P_CCW_COMPLIANCE_MARGIN     = 27,
-                P_CW_COMPLIANCE_SLOPE       = 28,
-                P_CCW_COMPLIANCE_SLOPE      = 29,
-                P_GOAL_POSITION_L           = 30,
-                P_GOAL_POSITION_H           = 31,
-                P_MOVING_SPEED_L            = 32,
-                P_MOVING_SPEED_H            = 33,
-                P_TORQUE_LIMIT_L            = 34,
-                P_TORQUE_LIMIT_H            = 35,
-                P_PRESENT_POSITION_L        = 36,
-                P_PRESENT_POSITION_H        = 37,
-                P_PRESENT_SPEED_L           = 38,
-                P_PRESENT_SPEED_H           = 39,
-                P_PRESENT_LOAD_L            = 40,
-                P_PRESENT_LOAD_H            = 41,
-                P_PRESENT_VOLTAGE           = 42,
-                P_PRESENT_TEMPERATURE       = 43,
-                P_REGISTERED_INSTRUCTION    = 44,
-                P_MOVING                    = 46,
-                P_LOCK                      = 47,
-                P_PUNCH_L                   = 48,
-                P_PUNCH_H                   = 49,
-                MAXNUM_ADDRESS
-            };
+public:
+	
+	static Interface* createInterface(int baud);
 
-            
+	Interface(int baudrate) : currentlyOpen(false){
+		baud = baudrate;
+	}
+
+	virtual Status openPort(const char * field) = 0;
+
+	virtual void closePort() = 0;
+
+	int baud;
+
+protected:
+
+	bool currentlyOpen;
+
+};
+
+class USB2AX : public Interface {
+public:
+	USB2AX(int baudrate) : Interface(baudrate), fid(-1) {
+	}
+	Status openPort(const char * field);//must execute 'sudo usermod -a -G dialout $USERNAME' before this will work, if you have not already added yourself to the dialout group.
+	void closePort();
+protected:
+	int	fid;
+};
+
+class Handler{
+private:
+
+	std::map<unsigned char, Motor*> dynamixelList;
+
+	Interface* interface;
+
+	bool isBusy;
+
+public:
+
+	Handler();
+
+	~Handler();
+
+	Interface::Status openInterface(const char * field, int baudrate);
+
+	void forceAddDynamixel(unsigned int ID);
+
+	std::map<unsigned char, Motor*> getDynamixels();
+
+protected:
+
+	int baud;
+};
+
+class Motor {
+
+	/*friend classes allow us to access'private'... 
+	...and 'protected' members of other classes
+	*/
+	friend class Interface;
+	friend class Handler;
+	friend class Packet;
+
+public:
+	unsigned short getWord(int iReg);
+
+	/*Sets the goal position of a motor
+	*/
+	void setGoalPosition(double dAngle);
+
+	/*Sets the speed of a motor(in revolutions per minute)
+	*/
+	void setSpeed(double dSpeed);
+
+private:
+
+	MotorCalibration calibration;
+
+	size_t numberOfRegisters;
+	unsigned char * registers;
+	unsigned char * registersDesired;
+
+	/*The main place where all of the motor information is stored
+	*/
+	static std::map<int, Register> register_map;
 
 
+protected:
 
-            /*Position*/
-            static const int AX_MIN_VALUE    =    0;
-            static const int AX_CENTER_VALUE =  512;
-            static const int AX_MAX_VALUE    = 1023;
+};
+class Packet {
 
-            /*Angles*/
-            static const double AX_MIN_ANGLE    = -150;
-            static const double AX_MAX_ANGLE    =  150;
-
-            static const double RATIO_V2A = 0.293; // 300 / 1024
-            static const double RATIO_A2V = 3.413; // 1024 / 300
-            static const int PARAM_BYTES = 7;
-
-            static int getMirrorValue(int value)
-            {
-                return AX_MAX_VALUE + 1 - value;
-            }    
-
-            static double getMirrorAngle(double angle)
-            {
-                return (-1 * angle);
-            }
-            static int A2V(double angle)
-            {
-                return (int)(angle * RATIO_A2V) + AX_CENTER_VALUE;
-            }
-            static double V2A(int value)
-            {
-                return (double)(value - AX_CENTER_VALUE) * RATIO_V2A;
-            }
-
-
-        };
-        class Communication
-        {
-        public:
-            Communication(int baudretae);//sets the desired baudrate
-            ~Communication();
+private:
 
 
 
+	void beginPacket(int iID);//the head/header of the packet
+	void endPacket();//the foot of the packet
 
-        private:
+	void setPacketID(int iID);
+	void setPacketInstruction(unsigned char ucInstruction);
+	void setPacketAddress(int iAddress);
+	void setPacketLowHighByte(int iWord);
 
-        protected:
+	int getPacketLowByte(int iWord);
+	int getPacketHighByte(int iWord);
 
 
-        };
-}
+	
 
-#endif
+public:
+	std::vector<unsigned char> packet;//the data packet to be sent/received
+
+	Packet(){
+	}
+	std::vector<unsigned char>& ping(int iID);
+	std::vector<unsigned char>& readByte(int iID, int iAddress);//length read = 1
+	std::vector<unsigned char>& readWord(int iID, int iAddress);//length read = 2
+	std::vector<unsigned char>& writeByte(int iID, int iAddress, int ivalue);//length written = 1
+	std::vector<unsigned char>& writeWord(int iID, int iAddress, int ivalue);//length written = 2
+	std::vector<unsigned char>& reset(int iID);
+
+	void write(int iID, int iAddress, int ivalue);
+	void viewPacket();
+
+protected:
+	bool m_bBusInUse;
+};
+struct DataRange {
+
+	unsigned short reg;
+	unsigned short length;
+
+	DataRange(unsigned short reg = 0, unsigned short length = 0) : reg(reg), length(length){
+	}
+};
+unsigned char getChecksum(const unsigned char * pkucBuffer);
+
+
+}//namespace Dynamixel
+}//namespace EARL
+
+#endif//#ifndef _DYNAMIXEL_H_
