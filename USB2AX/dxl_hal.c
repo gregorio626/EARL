@@ -15,7 +15,7 @@ Nicolas Saugnier
 #include <iostream>
 #include <errno.h>
 
-#include "/home/gregorio626/EARL/Framework/include/dynamixel/USB2AX/dxl_hal.h"
+#include "/home/gregorio626/EARL/include/dynamixel/dxl_hal.h"
 
 int	gSocket_fd	= -1;
 long	glStartTime	= 0;
@@ -24,17 +24,17 @@ float	gfByteTransTime	= 0.0f;
 
 char	gDeviceName[20];
 
-int dxl_hal_open(int deviceIndex, float baudrate)
+int openPort(int iDeviceIndex, float baudrate)
 {
 	struct termios newtio;
 	//struct serial_struct serinfo;
-	char dev_name[100] = {0, };
+	char devName[100] = {0, };
 
-	sprintf(dev_name, "/dev/ttyACM%d", deviceIndex); // USB2AX is ttyACM
+	sprintf(dev_name, "/dev/ttyACM%d", iDeviceIndex); // USB2AX is ttyACM
 
-	strcpy(gDeviceName, dev_name);
+	strcpy(gDeviceName, devName);
 	memset(&newtio, 0, sizeof(newtio));
-	dxl_hal_close();
+	closePort();
 	
 	if((gSocket_fd = open(gDeviceName, O_RDWR|O_NOCTTY|O_NONBLOCK)) < 0) {
 		fprintf(stderr, "device open error: %s\n", dev_name);
@@ -55,13 +55,13 @@ int dxl_hal_open(int deviceIndex, float baudrate)
 		return 0;
         
 	
-	dxl_hal_close();
+	closePort();
 	
 	gfByteTransTime = (float)((1000.0f / baudrate) * 12.0f);
 	
-	strcpy(gDeviceName, dev_name);
+	strcpy(gDeviceName, devName);
 	memset(&newtio, 0, sizeof(newtio));
-	dxl_hal_close();
+	closePort();
 	
 	if((gSocket_fd = open(gDeviceName, O_RDWR|O_NOCTTY|O_NONBLOCK)) < 0) {
 		fprintf(stderr, "device open error: %s\n", dev_name);
@@ -81,18 +81,18 @@ int dxl_hal_open(int deviceIndex, float baudrate)
 	return 1;
 
 DXL_HAL_OPEN_ERROR:
-	dxl_hal_close();
+	closePort();
 	return 0;
 }
 
-void dxl_hal_close()
+void closePort()
 {
 	if(gSocket_fd != -1)
 		close(gSocket_fd);
 	gSocket_fd = -1;
 }
 
-int dxl_hal_set_baud( float baudrate )
+int setBaud( float baudrate )
 {
 	struct serial_struct serinfo;
 	
@@ -115,7 +115,7 @@ int dxl_hal_set_baud( float baudrate )
 		return 0;
 	}
 	*/
-	//dxl_hal_close();
+	//closePort();
 	//dxl_hal_open(gDeviceName, baudrate);
 	
 	gfByteTransTime = (float)((1000.0f / baudrate) * 12.0f);

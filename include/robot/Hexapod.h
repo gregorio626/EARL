@@ -6,12 +6,16 @@
 *
 */
 
-#include "/home/gregorio626/EARL/include/dynamixel/dynamixel.h"
+#include "dynamixel.h"
+#include <map>
+#include <string>
+
 
 #ifndef _HEXAPOD_H_
 #define _HEXAPOD_H_
 
 namespace EARL {
+using namespace Dynamixel;
 	namespace Robot {
 
 		class Hexapod {
@@ -19,17 +23,21 @@ namespace EARL {
 
 		public:
 
-			std::map<unsigned char, Dynamixel::Motor*> dxl;
+			void setDynamixelHandler(PortHandler* handler);
 
-			Dynamixel::Handler* dynamixelHandler;
+			PortHandler* dynamixelHandler;
+
+			std::map<unsigned char, Dynamixel::Motor*> dyn;
+
 
 			/*Populates the motor list
 			'motorCount' === the number of motors used in the robot
 			*/
-			void setupHandler(Dynamixel::Handler* pHandlerObj, unsigned int motorCount);
+
 		protected:
 
 		};
+		void getError(int errorNumber);
 	}
 }
 

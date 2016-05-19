@@ -7,20 +7,48 @@
 */
 
 
-#include "/home/gregorio626/EARL/include/dynamixel/dynamixel.h"
-#include "/home/gregorio626/EARL/include/robot/Hexapod.h"
+#include "dynamixel.h"
 
-using namespace EARL;
-using namespace Robot;
+#include <math.h>
+#include <unistd.h>
+#include <fstream>
+#include <sstream>
+#include <typeinfo>
+#include <map>
 
-void Hexapod::setupHandler(Dynamixel::Handler* pHandlerObj, unsigned int motorCount) {
+using namespace EARL::Robot;
+using namespace EARL::Dynamixel;
 
-	dynamixelHandler = pHandlerObj;
-
-	if(dynamixelHandler == NULL)
+void Hexapod::setDynamixelHandler(PortHandler * handler) {
+	dynamixelHandler = handler;
+	if (dynamixelHandler == NULL) {
 		return;
-
-	for(unsigned int ii = 0; ii < motorCount; ii++){
-		dynamixelHandler->forceAddDynamixel(ii + 1);
 	}
+
+	for (unsigned int i = 0; i < 18; i++)  // initialize motor handling
+			{
+		dynamixelHandler->forceAddDynamixel((i + 1), MODEL_AX18A);
+		// dyn[i]->uploadAll();    // Have all current motor information
+	}
+
+	// dyn = new std::vector<Motor*>;
+	dyn = dynamixelHandler->getDynamixels();
+
+	for (std::map<unsigned char, Motor*>::iterator it = dyn.begin();
+			it != dyn.end(); it++) {
+		dynamixelHandler->pushInstruction(
+				new Instruction(Instruction::READ, DataRange(0, 2),
+						it->second));
+	}
+	while (dynamixelHandler->busy())
+		;
+	for (std::map<unsigned char, Motor*>::iterator it = dyn.begin();
+			it != dyn.end(); it++) {
+		dynamixelHandler->pushInstruction(
+				new Instruction(Instruction::READ,
+						DataRange(2, it->second->getNumberOfRegisters() - 2),
+						it->second));
+	}
+	while (dynamixelHandler->busy() == true)
+		;
 }

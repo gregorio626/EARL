@@ -21,7 +21,7 @@ int dxl_initialize( int devIndex, int baudnum )
 	float baudrate;	
 	baudrate = 2000000.0f / (float)(baudnum + 1);
 	
-	if( dxl_hal_open(devIndex, baudrate) == 0 )
+	if( openPort(devIndex, baudrate) == 0 )
 		return 0;
 
 	gbCommStatus = COMM_RXSUCCESS;
@@ -31,7 +31,7 @@ int dxl_initialize( int devIndex, int baudnum )
 
 void dxl_terminate()
 {
-	dxl_hal_close();
+	closePort();
 }
 
 void dxl_tx_packet()
