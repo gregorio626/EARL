@@ -21,6 +21,10 @@
 #include <termios.h>
 #include <fcntl.h>
 
+
+
+
+
 using namespace EARL;
 using namespace Dynamixel;
 using namespace Robot;
