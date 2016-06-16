@@ -1,38 +1,63 @@
+/*
+ * main.cpp
+ *
+ *  Created on: May 25, 2016
+ *      Author: gregorio626
+ */
+
+
 #include <iostream>
-#include <errno.h>
+
 #include "dynamixel.h"
-#include "Hexapod.h"
+#include "hexapod.h"
+
+#include <string>
 #include <vector>
+#include <map>
+#include <sys/time.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <unistd.h>
+#include <termios.h>
+#include <fcntl.h>
 
-#ifdef _cplusplus
-extern "C" {
-#endif
-using namespace EARL::Robot;
-using namespace EARL::Dynamixel;
 
 
-int main(int argc, char * argv[])
-{
+
+
+using namespace EARL;
+using namespace Dynamixel;
+using namespace Robot;
+
+int main(int argc, char * argv[]) {
+
 	int baudrate = 1000000;
-	unsigned int motorCount = 18;
-
-	Hexapod * hexapod;
-	hexapod = new Hexapod;
-	Handler * mainHandler = new Handler;
-	mainHandler->openInterface("/dev/ttyACM0", baudrate);
-	hexapod->setupHandler(mainHandler, motorCount);
-
-	std::cout << mainHandler->getDynamixels();
 
 
+	////WELCOME & PORT INTIALIZATION////
+	std::cerr << "//////////////////////////////" << std::endl;
+	std::cerr << "//-------EARL Hexapod-------//" << std::endl;
+	std::cerr << "//////////////////////////////" << std::endl << std::endl;
+
+	Hexapod hexapod(true);
+	Master * master = new Master(true);
+
+	hexapod.setMaster(master);//set the Dynamixel master object
+
+	master->initialize("/dev/ttyACM0", baudrate);//initialize the serial port
+
+	////MOTOR SETUP////
+	hexapod.setupMotors(18);//setup 18 motors after verifying that they are all connected
+
+	master->terminate();
 
 
-	std::cout << "Errno: " << errno << std::endl << std::endl;
+
+
+
 
 
 	return 0;
 }
 
-#ifdef _cplusplus
-}
-#endif
+

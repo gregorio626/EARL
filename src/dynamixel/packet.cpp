@@ -1,211 +1,273 @@
 /*
-*
-*   Author: EARL Technologies
-*
-*   Created: May 03, 2016
-*
-*/
+ * packet.cpp
+ *
+ *  Created on: May 25, 2016
+ *      Author: gregorio626
+ */
 
-
-#include "dxl.h"
-#include <vector>
+#include "dynamixel.h"
 #include <iostream>
-
-
-
-#define ID					  (2)
-#define LENGTH				  (3)
-#define INSTRUCTION			  (4)
-#define ERRBIT				  (4)
-#define PARAMETER			  (5)
-
-
-#define MAX_TXPARAM           (150)
-#define MAX_RXPARAM           (225)
+#include <termios.h>
+#include <unistd.h>
+#include <sys/time.h>
+#include <string.h>
+#include <vector>
 
 using namespace EARL;
 using namespace Dynamixel;
 
+#define BROADCAST_ID        (0xFE)
+
+#define PKT_HEAD_0				(0)
+#define PKT_HEAD_1				(1)
+#define PKT_ID					(2)
+#define PKT_LENGTH				(3)
+#define PKT_INSTRUCTION			(4)
+#define PKT_ERRBIT				(4)
+#define PKT_PARAMETER			(5)
+#define PKT_DEFAULT_BAUDNUMBER	(1)
+
+#define MIN_SIZE				(6)
 
 
+unsigned char Packet::getChecksum(const unsigned char * buffer) {
+	unsigned char checksum = 0;
+	int i;
+	for (i = 2; i < (3 + buffer[3]); i++)
+		checksum += buffer[i];
+	return ~(checksum & 0xFF);
+}
 
-#ifdef _cplusplus
-extern "C" {
-#endif
+/*Create the packet header, set the id, and allocate for the length*/
+void Packet::beginTxPacket(unsigned char id) {
+	InstructionPacket.clear();
 
-/*Calculate the checksum of the packet*/
-unsigned char EARL::Dynamixel::getChecksum(const unsigned char * pkucBuffer) {
-	unsigned char ucChecksum = 0;
-	int ii;
-	for(ii = 2; ii < (3 + pkucBuffer[3]); ii++)
-		ucChecksum += pkucBuffer[ii];
-	return ~(ucChecksum & 0xFF);
+	InstructionPacket.push_back(0xff);
+	InstructionPacket.push_back(0xff);
+	setTxPacketID(id);
+	InstructionPacket.push_back(0x00);//allocate for the length
+}
+
+void Packet::beginTxSyncWritePacket(unsigned char ucStartRegister, unsigned char ucNumBytes) {
+
+	InstructionPacket.clear();
+
+	InstructionPacket.push_back(0xFF);//header 0
+	InstructionPacket.push_back(0xFF);//header 1
+	setTxPacketID(BROADCAST_ID);//ID(Broadcast ID(0xFE)) 2
+	InstructionPacket.push_back(0x00);//Allocate for length 3
+	setTxPacketInstruction(SYNC_WRITE);//Instruction(0x83) 4
+	setTxPacketParameter(ucStartRegister);//start register 5
+	setTxPacketParameter(ucNumBytes);//number of bytes being written 6
 
 }
 
-/*Create the packet header*/
-void Packet::beginTxPacket(int iID)//create the header; 'dataSize' is either 
-{
-	packet.clear();//Clear content
-
-	packet.push_back(0xFF);//header
-	packet.push_back(0xFF);//header
-	setTxPacketID(iID);//Set the dynamixel ID
-	packet.push_back(0x00);//Length
-}
-
-/*Create the packet footer*/
 void Packet::endTxPacket() {
-	
-	packet[LENGTH] = packet.size() - 3;
-	packet.push_back(getChecksum(packet.data()));
+	InstructionPacket[PKT_LENGTH] = InstructionPacket.size() - 3;//subtract three because of header 1, header 2, and length
+	InstructionPacket.push_back(getChecksum(InstructionPacket.data()));
 }
 
-/*Set the motor ID of the packet*/
-void Packet::setTxPacketID(int iID) { 
-	packet.push_back((unsigned char)(iID));//sets the 3rd container to the ID in hexadecimal.
+/*Sets the dynamixel ID*/
+void Packet::setTxPacketID(unsigned char id) {
+	InstructionPacket.push_back(id);
+}
+
+/*Set the Instruction*/
+void Packet::setTxPacketInstruction(unsigned char instruction) {
+	InstructionPacket.push_back(instruction);
+}
+
+void Packet::setTxPacketParameter(unsigned char val) {
+	InstructionPacket.push_back(val);
+}
+
+int Packet::getLowByte(int iWord) {
+	unsigned short temp;
+
+	temp = iWord & 0xff;
+	return (int)temp;
+}
+
+int Packet::getHighByte(int iWord) {
+	unsigned short temp;
+
+	temp = iWord & 0xff00;
+	temp = temp >> 8;
+	return (int)temp;
+}
+
+/*PING*/
+////////////////////////////////////////////////////////////
+const std::vector<unsigned char>& Packet::mk_Ping(unsigned char& id)
+{
+	beginTxPacket(id);//header, id, length
+
+	setTxPacketInstruction(PING);//instruction
+
+	endTxPacket();//footer(checksum)ERR_PACKET_EMPTY;
+	return InstructionPacket;
 
 }
 
-/*Set the instruction value of the packet*/
-void Packet::setTxPacketInstruction(unsigned char ucInstruction){
-	if(packet.back() != 0x00){
-		std::cout << "Error setting the packet instruction." << std::endl;
-		return;
+/*READ*/
+/////////////////////////////////////////////////////InstructionPacket.push_back(////////////////////////////////
+const std::vector<unsigned char>& Packet::mk_ReadByte(unsigned char& id, unsigned char& reg) {
+
+	beginTxPacket(id);//header, id, length
+
+	setTxPacketInstruction(READ_DATA);//instruction
+
+	InstructionPacket.push_back(reg);//register
+	InstructionPacket.push_back(0x01);//read # of bytes
+
+	endTxPacket();//footer(checksum)
+	return InstructionPacket;
+}
+
+const std::vector<unsigned char>& Packet::mk_ReadWord(unsigned char& id, unsigned char& reg) {
+
+	beginTxPacket(id);//header, id, length
+
+	setTxPacketInstruction(READ_DATA);//instruction
+
+	InstructionPacket.push_back(reg);//register
+	InstructionPacket.push_back(0x02);//read # of bytes
+
+	endTxPacket();//footer(checksum)
+	return InstructionPacket;
+}
+
+/*WRITE*/
+///////////////////////////////////////////////////////////////////////////////////////////////////////////
+const std::vector<unsigned char>& Packet::mk_WriteByte(unsigned char& id, unsigned char& reg, unsigned int& val) {
+
+	beginTxPacket(id);//header, id, length
+
+	setTxPacketInstruction(WRITE_DATA);//instruction
+
+	InstructionPacket.push_back(reg);//register
+	InstructionPacket.push_back((unsigned char)val);//value
+
+	endTxPacket();//footer(checksum)
+	return InstructionPacket;
+}
+
+const std::vector<unsigned char>& Packet::mk_WriteWord(unsigned char& id, unsigned char& reg, unsigned int& val) {
+
+	beginTxPacket(id);//header, ID, length
+
+	setTxPacketInstruction(WRITE_DATA);//instruction
+
+	InstructionPacket.push_back(reg);//register
+
+	InstructionPacket.push_back((unsigned char)getLowByte(val));//value(Low byte)
+	InstructionPacket.push_back((unsigned char)getHighByte(val));//value(High byte)
+
+	endTxPacket();//checksum
+	return InstructionPacket;
+}
+
+const std::vector<unsigned char>& Packet::mk_RegWrite(unsigned char& id, unsigned char& regStart, std::vector<int> iValue) {
+
+	beginTxPacket(id);//header, ID, length
+
+	setTxPacketInstruction(REG_WRITE);//Instruction
+
+	InstructionPacket.push_back(regStart);//register
+	for(unsigned int ii = 0; ii < iValue.size(); ii++) {
+
+		if(iValue[ii] >= 0 && iValue[ii] <= 255) {
+
+			/*push back as 1 byte*/
+			InstructionPacket.push_back((unsigned char)iValue[ii]);//value
+			InstructionPacket.push_back(0x00);
+
+		} else if(iValue[ii] > 155 && iValue[ii] <= 1024) {
+
+			/*push back as 2(high and low) bytes*/
+			InstructionPacket.push_back(getLowByte(iValue[ii]));//Low byte
+			InstructionPacket.push_back(getHighByte(iValue[ii]));//High byte
+		}
 	}
-	packet.push_back(ucInstruction);
 
+	endTxPacket();
+
+	return InstructionPacket;
 }
 
-/*Set the address value of the packet*/
-void Packet::setTxPacketReg(int iRegister) {
+const std::vector<unsigned char>& Packet::mk_Action() {
 
-	packet.push_back(iRegister);
+	beginTxPacket(0xFE);//ID => 0xFE
+	setTxPacketInstruction(ACTION);
+	endTxPacket();
 
+	return InstructionPacket;
 }
 
-/*Get the low byte for the packet*/
-unsigned char Packet::getLowByte(int iWord){
-	
-	unsigned short usiTmp;
-	usiTmp = iWord & 0xff;
+const std::vector<unsigned char>& Packet::mk_SyncWrite(unsigned char & ucStartRegister, unsigned char& ucNumBytes, std::vector<unsigned char> ID, std::vector<unsigned char> Value) {
 
-	return (unsigned char)usiTmp;
-}
-
-/*Get the high byte for the packet*/
-unsigned char Packet::getHighByte(int iWord){
-
-	unsigned short usiTmp;
-	usiTmp  = iWord & 0xff00;
-	usiTmp = usiTmp >> 8;
-
-	return (unsigned char)usiTmp;
-}
-
-void Packet::setTxPacketValue(int iValue) {
-
-	if(iValue >= 0 && iValue <= 255){
-		packet.push_back((unsigned char)(getLowByte(iValue));
-	}else if(iValue >=0 && iValue <= 1024) {
-		packet.push_back((unsigned char)(getLowByte(iValue)));
-		packet.push_back((unsigned char)(getHighByte(iValue)));
+	/*Verify that neither vector is empty*/
+	if(ID.size() == 0 || Value.size() == 0) {
+		if(m_Debug) {
+			std::cerr << "Error: EARL::Dynamixel::Packet::mk_SyncWrite(...)----> Parameter(s) empty." << std::endl;
+		}
+		InstructionPacket.clear();
+		return InstructionPacket;
+	}
+	/*Verify that we are not attempting to write to Registers that do not exist*/
+	if((ucStartRegister + ucNumBytes) > AX_MAX_REG) {
+		if(m_Debug) {
+			std::cerr << "Error: EARL::Dynamixel::Packet::mk_SyncWrite(...)----> Too many bytes being written." << std::endl;
+		}
+		InstructionPacket.clear();
+		return InstructionPacket;
 	}
 
-}
-/*
-////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////
-*/
-
-/*Packet to ping a motor*/
-std::vector<unsigned char>& Packet::ping(int iID) {
-	
-	beginTxPacket(iID);//create header
-	setTxPacketInstruction(INSTRUCTION_PING);
-	endTxPacket();//create footer
-
-	return packet;
-}
-
-/*Packet for reading a byte*/
-std::vector<unsigned char>& Packet::readByte(int iID, int iReg){
-	
-	beginTxPacket(iID);//create the header
-	setTxPacketInstruction(INSTRUCTION_READ);
-	setTxPacketReg(iReg);
-	packet.push_back(1);
-	endTxPacket();//create the footer & set the checksum value
-
-	return packet;
-}
-
-/*Packet for reading a word*/
-std::vector<unsigned char>& Packet::readWord(int iID, int iReg){
-	
-	beginTxPacket(iID);//create the header
-	setTxPacketInstruction(INSTRUCTION_READ);
-	setTxPacketReg(iReg);
-	packet.push_back(2);
-	endTxPacket();//create the footer
-
-	return packet;	
-}
-
-/*Packet for writing a byte*/
-std::vector<unsigned char>& Packet::writeByte(int iID,int iRegister, int iValue){
-	
-	beginTxPacket(iID);//create the header
-	setTxPacketInstruction(INSTRUCTION_WRITE);
-	setTxPacketReg(iRegister);//The register that we will be writing a value to
-	setTxPacketValue(iValue);//sets the container(s) for the value assocated with the specified register
-	endTxPacket();//create the footer
-
-	return packet;
-}
-
-/*Packet for writing a word*/
-std::vector<unsigned char>& Packet::writeWord(int iID,int iRegister, int iValue){
-	
-	beginTxPacket(iID);//create the header
-	setTxPacketInstruction(INSTRUCTION_WRITE);
-	setTxPacketReg(iRegister);//The register that we will be writing a value to
-	setTxPacketValue(iValue);//sets the container(s) for the value assocated with the specified register
-	endTxPacket();//create the footer
-
-	return packet;
-}
-/*Packet for resetting a motor*/
-std::vector<unsigned char>& Packet::reset(int iID) {
-
-	beginTxPacket(iID);//create the header
-	setTxPacketInstruction(INSTRUCTION_RESET);
-	endTxPacket();//create the footer
-
-	return packet;
-}
-
-
-void Packet::viewPacket() {
-	std::cout << "Current packet: ";
-	for(unsigned int ii = 0; ii < packet.size(); ii++) {
-		std::cout << (int)packet[ii] << " ";
+	/*Verify that there are enough values for each ID, and visa versa*/
+	if((ID.size() * ucNumBytes) != Value.size()) {
+		if(m_Debug) {
+			std::cerr << "Error: EARL::Dynamixel::Packet::mk_SyncWrite(...)----> (ID.size() * ucNumBytes) != Value.size()." << std::endl;
+		}
+		InstructionPacket.clear();
+		return InstructionPacket;
 	}
-	std::cout << std::endl;
+
+	beginTxSyncWritePacket(ucStartRegister, ucNumBytes);//0-6
+
+	do {
+		InstructionPacket.push_back(ID.back());
+		for(int nn = 0; nn < ucNumBytes; nn++) {
+			InstructionPacket.push_back(Value.at(nn));
+		}
+		ID.pop_back();
+		Value.erase(Value.begin(), Value.begin() + ucNumBytes);
+	}while(ID.size() > 0);
+
+	endTxPacket();
+
+	return InstructionPacket;
 }
 
 
-/*Instruction packet component:
-			
-			0xFF 0xFF :the beginnig of the packet
-			0x01      :ID 1
-			0x00      :length(in this case = 7)
-			0x02      :instruction(in this case = 2 = READ)
-			0x00 0x00 :begin from address 0
-			0x00 0x02 :read 2 bytes
+bool Packet::checkPacket(const std::vector<unsigned char>& data) {
+	if(data.size() < MIN_SIZE) {
+		if(m_Debug) {
+			std::cerr << "Error: EARL::Dynamixel::Packet::checkPacket(...)---->data.size() < minimum size of valid packet(size of bad packet: " << data.size() << ")." << std::endl;
+		}
+		return false;//ERROR
 
+	} else if(data[0] != 0xFF || data[1] != 0xFF) {
+		if(m_Debug) {
+					std::cerr << "Error: EARL::Dynamixel::Packet::checkPacket(...)---->bad header." << std::endl;
+		}
+		return false;//ERROR
 
-*/
-#ifdef _cplusplus
+	} else if(data.size() != (unsigned int)(data[3] + 4)) {
+		if(m_Debug) {
+					std::cerr << "Error: EARL::Dynamixel::Packet::checkPacket(...)---->data.size() = " << (int) data.size() << " != (data[3] + 4) = " << (int) (data[3] + 4) << std::endl;
+		}
+		return false;//ERROR
+	}
+	return getChecksum(data.data()) == data[3 + data[3]];
 }
-#endif
+

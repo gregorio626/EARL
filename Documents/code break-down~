@@ -1,0 +1,9 @@
+
+----main.cpp----
+
+1. included libraries
+2. namespaces being used
+3. specify the baud rate
+4. cretae objects/object pointers
+	~Hexapod object pointer=>Used to run high level functions.
+	~Master object pointer=>Used to interface with motors. This object handles all of the motor communication. It is also nested 					in the Hexapod class object pointer, so that everything can be run through Hexapod object
