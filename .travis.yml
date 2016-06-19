@@ -1,5 +1,5 @@
 language: cpp
 
-install: make get-deps
-
-# script: bundle exec rspec spec
+compiler:
+  - clang
+  - gcc
