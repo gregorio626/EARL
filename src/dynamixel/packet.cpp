@@ -29,11 +29,10 @@ using namespace Dynamixel;
 
 #define MIN_SIZE				(6)
 
-
 unsigned char Packet::getChecksum(const unsigned char * buffer) {
 	unsigned char checksum = 0;
 	int i;
-	for (i = 2; i < (3 + buffer[3]); i++)
+	for (i = 2; i < (3 + buffer[PKT_LENGTH]); i++)
 		checksum += buffer[i];
 	return ~(checksum & 0xFF);
 }
@@ -48,7 +47,7 @@ void Packet::beginTxPacket(unsigned char id) {
 	InstructionPacket.push_back(0x00);//allocate for the length
 }
 
-void Packet::beginTxSyncWritePacket(unsigned char ucStartRegister, unsigned char ucNumBytes) {
+void Packet::beginSyncWritePacket(unsigned char ucStartRegister, unsigned char ucNumBytes) {
 
 	InstructionPacket.clear();
 
@@ -208,7 +207,7 @@ const std::vector<unsigned char>& Packet::mk_SyncWrite(unsigned char & ucStartRe
 
 	/*Verify that neither vector is empty*/
 	if(ID.size() == 0 || Value.size() == 0) {
-		if(m_Debug) {
+		if(m_Debug == 1 || m_Debug == 3) {
 			std::cerr << "Error: EARL::Dynamixel::Packet::mk_SyncWrite(...)----> Parameter(s) empty." << std::endl;
 		}
 		InstructionPacket.clear();
@@ -216,7 +215,7 @@ const std::vector<unsigned char>& Packet::mk_SyncWrite(unsigned char & ucStartRe
 	}
 	/*Verify that we are not attempting to write to Registers that do not exist*/
 	if((ucStartRegister + ucNumBytes) > AX_MAX_REG) {
-		if(m_Debug) {
+		if(m_Debug == 1 || m_Debug == 3) {
 			std::cerr << "Error: EARL::Dynamixel::Packet::mk_SyncWrite(...)----> Too many bytes being written." << std::endl;
 		}
 		InstructionPacket.clear();
@@ -225,14 +224,14 @@ const std::vector<unsigned char>& Packet::mk_SyncWrite(unsigned char & ucStartRe
 
 	/*Verify that there are enough values for each ID, and visa versa*/
 	if((ID.size() * ucNumBytes) != Value.size()) {
-		if(m_Debug) {
+		if(m_Debug == 1 || m_Debug == 3) {
 			std::cerr << "Error: EARL::Dynamixel::Packet::mk_SyncWrite(...)----> (ID.size() * ucNumBytes) != Value.size()." << std::endl;
 		}
 		InstructionPacket.clear();
 		return InstructionPacket;
 	}
 
-	beginTxSyncWritePacket(ucStartRegister, ucNumBytes);//0-6
+	beginSyncWritePacket(ucStartRegister, ucNumBytes);//0-6
 
 	do {
 		InstructionPacket.push_back(ID.back());
@@ -251,19 +250,19 @@ const std::vector<unsigned char>& Packet::mk_SyncWrite(unsigned char & ucStartRe
 
 bool Packet::checkPacket(const std::vector<unsigned char>& data) {
 	if(data.size() < MIN_SIZE) {
-		if(m_Debug) {
+		if(m_Debug == 1 || m_Debug == 3) {
 			std::cerr << "Error: EARL::Dynamixel::Packet::checkPacket(...)---->data.size() < minimum size of valid packet(size of bad packet: " << data.size() << ")." << std::endl;
 		}
 		return false;//ERROR
 
 	} else if(data[0] != 0xFF || data[1] != 0xFF) {
-		if(m_Debug) {
+		if(m_Debug == 1 || m_Debug == 3) {
 					std::cerr << "Error: EARL::Dynamixel::Packet::checkPacket(...)---->bad header." << std::endl;
 		}
 		return false;//ERROR
 
 	} else if(data.size() != (unsigned int)(data[3] + 4)) {
-		if(m_Debug) {
+		if(m_Debug == 1 || m_Debug == 3) {
 					std::cerr << "Error: EARL::Dynamixel::Packet::checkPacket(...)---->data.size() = " << (int) data.size() << " != (data[3] + 4) = " << (int) (data[3] + 4) << std::endl;
 		}
 		return false;//ERROR

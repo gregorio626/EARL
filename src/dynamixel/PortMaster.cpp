@@ -7,10 +7,6 @@
 
 #include "dynamixel.h"
 
-#include <unistd.h>
-#include <vector>
-#include <iostream>
-
 using namespace EARL;
 using namespace Dynamixel;
 
@@ -18,8 +14,10 @@ using namespace Dynamixel;
  */
 int Master::initialize(const char * pkcPortName, int iBaud) {
 
-
-	std::cerr << "~~~~initializing UART port~~~~" << std::endl << std::endl;
+	if(m_Debug > 1) {
+		std::cerr << std::endl;
+		std::cerr << ">~~~~~~~Initializing UART port~~~~~~~~<" << std::endl << std::endl;
+	}
 	m_Baud = iBaud;
 	port = new Port(iBaud, m_Debug);
 
@@ -28,9 +26,8 @@ int Master::initialize(const char * pkcPortName, int iBaud) {
 	if((rtrn = port->openPort(pkcPortName)) != 1) {
 		return 0;//failed
 	}
-
-	if(port->Port_IsDebug()) {
-		std::cerr << "#------>'" << pkcPortName << "' has been successfully initialized." << std::endl;
+	if(m_Debug == 4) {
+		std::cerr << "<~~~~~~~~~~~~~~~Success~~~~~~~~~~~~~~~>" << std::endl << std::endl;
 	}
 	return true;//success
 }
@@ -39,7 +36,9 @@ int Master::initialize(const char * pkcPortName, int iBaud) {
  */
 void Master::terminate() {
 	std::cerr << std::endl;
-	std::cerr << "~~~~Terminating UART port~~~~" << std::endl;
+	if(m_Debug > 1) {
+		std::cerr << "~~~~Terminating UART port~~~~" << std::endl;
+	}
 	port->closePort();
 }
 
